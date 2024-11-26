@@ -25,84 +25,94 @@ if 'show_welcome' not in st.session_state:
 # Custom styling
 st.markdown("""
     <style>
-    /* Sidebar specific styles */
-    .css-1d391kg {  /* Sidebar */
-        background-color: #1e1e1e;
+    /* General text and elements - using CSS variables for theme colors */
+    .element-container, .stMarkdown {
+        color: var(--text-color);
     }
 
+    /* Base app styling */
+    .stApp {
+        background-color: var(--background-color);
+    }
+
+    /* File browser styling */
+    .file-list-header {
+        font-size: 0.875rem;
+        padding: 0.5rem;
+        border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+    }
+
+    .file-row {
+        padding: 0.5rem;
+        margin: 0;
+        line-height: 1.5;
+        display: flex;
+        align-items: center;
+    }
+
+    .file-row:hover {
+        background-color: rgba(128, 128, 128, 0.1);
+    }
+
+    /* Button styling */
     .stButton button {
-        background-color: #2d2d2d !important;
-        color: #ffffff !important;
-        border: 1px solid #404040 !important;
+        width: 100%;
+        text-align: left;
+        padding: 0.5rem !important;
+        line-height: 1.5;
+        border: 1px solid rgba(128, 128, 128, 0.2) !important;
+        background-color: transparent !important;
     }
 
     .stButton button:hover {
-        background-color: #404040 !important;
-        border-color: #565656 !important;
-    }
-
-    /* Status indicator */
-    [data-testid="stMarkdownContainer"] {
-        color: #ffffff !important;
-    }
-
-    /* File/Folder icons and text */
-    .file-row {
-        color: #e0e0e0 !important;
-        background-color: transparent !important;
-    }
-
-    /* Folder icon specific styling */
-    button[key^="dir_"] {
-        background-color: transparent !important;
-        color: #00a2ff !important;
-    }
-
-    /* Empty cell styling */
-    .empty-cell {
-        color: #666666 !important;
-    }
-
-    /* Main content area */
-    .stApp {
-        background-color: #2b2b2b;
-    }
-
-    .file-list-header {
-        color: #ffffff !important;
-        background-color: #1e1e1e;
-        border-bottom: 1px solid #404040;
-    }
-
-    /* Upload section */
-    [data-testid="stFileUploadDropzone"] {
-        background-color: #1e1e1e !important;
-        border-color: #404040 !important;
-        color: #ffffff !important;
+        background-color: rgba(128, 128, 128, 0.1) !important;
     }
 
     /* Input fields */
     .stTextInput > div > div > input {
-        color: #ffffff !important;
-        background-color: #1e1e1e !important;
-        border-color: #404040 !important;
-    }
-
-    /* Action buttons */
-    .stDownloadButton button {
-        background-color: transparent !important;
-        color: #00a2ff !important;
-        border: none !important;
-    }
-
-    .stDownloadButton button:hover {
-        background-color: #404040 !important;
+        border: 1px solid rgba(128, 128, 128, 0.2) !important;
     }
 
     /* Navigation */
     .current-path {
-        color: #e0e0e0 !important;
-        background-color: #1e1e1e !important;
+        padding: 0.5rem;
+        background-color: rgba(128, 128, 128, 0.1);
+        border-radius: 4px;
+        margin-left: 1rem;
+    }
+
+    /* Upload section */
+    .upload-section {
+        padding: 1rem;
+        border-radius: 6px;
+        margin-top: 1rem;
+        border: 2px dashed rgba(128, 128, 128, 0.2);
+    }
+
+    /* Action buttons */
+    .action-button {
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .action-button:hover {
+        background-color: rgba(128, 128, 128, 0.1);
+    }
+
+    /* File icons */
+    button[key^="dir_"] {
+        color: inherit !important;
+    }
+
+    /* Hide Streamlit branding */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+
+    /* Empty cell styling */
+    .empty-cell {
+        color: rgba(128, 128, 128, 0.6);
     }
     </style>
 """, unsafe_allow_html=True)
