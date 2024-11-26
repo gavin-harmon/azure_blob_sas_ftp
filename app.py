@@ -23,153 +23,90 @@ if 'show_welcome' not in st.session_state:
     st.session_state.show_welcome = True
 
 # Custom styling
-# Custom styling
 st.markdown("""
     <style>
     /* Base app styling */
     .stApp {
-        background-color: #f8f9fa;
+        background-color: #ffffff;
     }
 
-    /* Remove extra spaces and default padding */
-    .block-container {
-        padding-top: 1rem !important;
-        padding-bottom: 1rem !important;
+    /* Text colors for light theme */
+    .element-container, .stMarkdown, .stText {
+        color: #111827 !important;
+    }
+
+    /* Table styles with enforced colors */
+    .file-list-header {
+        color: #111827 !important;
+        font-size: 0.875rem;
+        padding: 0.5rem;
+        border-bottom: 1px solid #e5e7eb;
+        background-color: #f9fafb;
+    }
+
+    .file-row {
+        color: #111827 !important;
+        padding: 0.5rem;
+        margin: 0;
+        line-height: 1.5;
+        display: flex;
+        align-items: center;
+        background-color: #ffffff;
+    }
+
+    /* Input fields */
+    .stTextInput > div > div > input {
+        color: #111827 !important;
+        background-color: #ffffff !important;
+    }
+
+    /* Navigation and path display */
+    .current-path {
+        color: #374151 !important;
+        background-color: #f3f4f6 !important;
+        padding: 0.5rem;
+        border-radius: 4px;
+        margin-left: 1rem;
+    }
+
+    /* Button text */
+    .stButton button {
+        color: #111827 !important;
+    }
+
+    /* Status text */
+    .success-message {
+        color: #059669 !important;
+    }
+
+    .error-message {
+        color: #dc2626 !important;
     }
 
     /* Hide Streamlit branding */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 
-    /* Navigation styling */
-    .navigation-bar {
-        padding: 0.5rem;
-        margin-bottom: 1rem;
-        display: flex;
-        align-items: center;
-    }
-
-    .current-path {
-        color: #6c757d;
-        padding: 0.5rem;
-        background-color: #f8f9fa;
-        border-radius: 4px;
-        margin-left: 1rem;
-    }
-
-    /* File browser styling */
-    .file-list-header {
-        color: #6c757d;
-        font-size: 0.875rem;
-        padding: 0.5rem;
-        border-bottom: 1px solid #e9ecef;
-    }
-
-    .file-row {
-        padding: 0.5rem;
-        margin: 0;
-        line-height: 1.5;
-        display: flex;
-        align-items: center;
-    }
-
-    .file-row:hover {
-        background-color: #f8f9fa;
-    }
-
-    /* Button styling */
-    .stButton button {
-        width: 100%;
-        text-align: left;
-        padding: 0.5rem !important;
-        line-height: 1.5;
-        border: none;
-        background: none;
-        margin: 0 !important;
-    }
-
-    .stButton button:hover {
-        background-color: #f8f9fa;
-    }
-
-    /* Action buttons */
-    .action-button {
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }
-
-    .action-button:hover {
-        background-color: #f8f9fa;
-    }
-
-    .delete-button {
-        color: #dc3545;
-    }
-
-    /* Upload section styling */
-    .upload-section {
+    /* File browser specific styles */
+    .file-browser {
+        background-color: #ffffff;
+        border-radius: 6px;
         padding: 1rem;
-        margin-bottom: 1rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
-    /* Breadcrumb styling */
-    .breadcrumb {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.5rem;
-        border-radius: 4px;
+    /* Upload section */
+    .upload-section {
+        background-color: #ffffff;
+        padding: 1rem;
+        border-radius: 6px;
+        margin-top: 1rem;
+        border: 2px dashed #e5e7eb;
     }
 
-    .breadcrumb-item {
-        color: #0d6efd;
-        text-decoration: none;
-        cursor: pointer;
-    }
-
-    .breadcrumb-separator {
-        color: #6c757d;
-    }
-
-    /* File/Folder icons and text */
-    .file-name {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .folder-name {
-        color: #1f77b4;
-        font-weight: 500;
-    }
-
-    /* Status messages */
-    .success-message {
-        color: #28a745;
-        padding: 0.5rem;
-        margin: 0.5rem 0;
-        border-radius: 4px;
-    }
-
-    .error-message {
-        color: #dc3545;
-        padding: 0.5rem;
-        margin: 0.5rem 0;
-        border-radius: 4px;
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .file-row {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-
-        .action-button {
-            margin-top: 0.5rem;
-        }
+    [data-testid="stFileUploadDropzone"] {
+        background-color: #f9fafb !important;
+        border-color: #e5e7eb !important;
     }
     </style>
 """, unsafe_allow_html=True)
