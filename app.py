@@ -388,7 +388,7 @@ def show_file_browser():
                             # Show confirmation
                             st.session_state[f"confirm_delete_{item['name']}"] = True
                             st.warning(
-                                f"Are you sure you want to delete {display_name}? Click delete button again to confirm.")
+                                f"You sure?")
 
     # Upload section
     st.markdown('<div class="upload-section">', unsafe_allow_html=True)
