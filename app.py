@@ -25,88 +25,84 @@ if 'show_welcome' not in st.session_state:
 # Custom styling
 st.markdown("""
     <style>
-    /* Base app styling */
-    .stApp {
-        background-color: #ffffff;
+    /* Sidebar specific styles */
+    .css-1d391kg {  /* Sidebar */
+        background-color: #1e1e1e;
     }
 
-    /* Text colors for light theme */
-    .element-container, .stMarkdown, .stText {
-        color: #111827 !important;
+    .stButton button {
+        background-color: #2d2d2d !important;
+        color: #ffffff !important;
+        border: 1px solid #404040 !important;
     }
 
-    /* Table styles with enforced colors */
-    .file-list-header {
-        color: #111827 !important;
-        font-size: 0.875rem;
-        padding: 0.5rem;
-        border-bottom: 1px solid #e5e7eb;
-        background-color: #f9fafb;
+    .stButton button:hover {
+        background-color: #404040 !important;
+        border-color: #565656 !important;
     }
 
+    /* Status indicator */
+    [data-testid="stMarkdownContainer"] {
+        color: #ffffff !important;
+    }
+
+    /* File/Folder icons and text */
     .file-row {
-        color: #111827 !important;
-        padding: 0.5rem;
-        margin: 0;
-        line-height: 1.5;
-        display: flex;
-        align-items: center;
-        background-color: #ffffff;
+        color: #e0e0e0 !important;
+        background-color: transparent !important;
+    }
+
+    /* Folder icon specific styling */
+    button[key^="dir_"] {
+        background-color: transparent !important;
+        color: #00a2ff !important;
+    }
+
+    /* Empty cell styling */
+    .empty-cell {
+        color: #666666 !important;
+    }
+
+    /* Main content area */
+    .stApp {
+        background-color: #2b2b2b;
+    }
+
+    .file-list-header {
+        color: #ffffff !important;
+        background-color: #1e1e1e;
+        border-bottom: 1px solid #404040;
+    }
+
+    /* Upload section */
+    [data-testid="stFileUploadDropzone"] {
+        background-color: #1e1e1e !important;
+        border-color: #404040 !important;
+        color: #ffffff !important;
     }
 
     /* Input fields */
     .stTextInput > div > div > input {
-        color: #111827 !important;
-        background-color: #ffffff !important;
+        color: #ffffff !important;
+        background-color: #1e1e1e !important;
+        border-color: #404040 !important;
     }
 
-    /* Navigation and path display */
+    /* Action buttons */
+    .stDownloadButton button {
+        background-color: transparent !important;
+        color: #00a2ff !important;
+        border: none !important;
+    }
+
+    .stDownloadButton button:hover {
+        background-color: #404040 !important;
+    }
+
+    /* Navigation */
     .current-path {
-        color: #374151 !important;
-        background-color: #f3f4f6 !important;
-        padding: 0.5rem;
-        border-radius: 4px;
-        margin-left: 1rem;
-    }
-
-    /* Button text */
-    .stButton button {
-        color: #111827 !important;
-    }
-
-    /* Status text */
-    .success-message {
-        color: #059669 !important;
-    }
-
-    .error-message {
-        color: #dc2626 !important;
-    }
-
-    /* Hide Streamlit branding */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-
-    /* File browser specific styles */
-    .file-browser {
-        background-color: #ffffff;
-        border-radius: 6px;
-        padding: 1rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Upload section */
-    .upload-section {
-        background-color: #ffffff;
-        padding: 1rem;
-        border-radius: 6px;
-        margin-top: 1rem;
-        border: 2px dashed #e5e7eb;
-    }
-
-    [data-testid="stFileUploadDropzone"] {
-        background-color: #f9fafb !important;
-        border-color: #e5e7eb !important;
+        color: #e0e0e0 !important;
+        background-color: #1e1e1e !important;
     }
     </style>
 """, unsafe_allow_html=True)
