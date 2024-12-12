@@ -407,7 +407,7 @@ def show_file_browser():
             # Size and modification date
             cols[1].markdown(f'<div class="file-row">{format_size(item.get("size", None))}</div>',
                              unsafe_allow_html=True)
-cols[2].markdown(
+            cols[2].markdown(
                 f'<div class="file-row">{item.get("last_modified", "-").strftime("%Y-%m-%d %H:%M:%S") if item.get("last_modified") else "-"}</div>',
                 unsafe_allow_html=True
             )
