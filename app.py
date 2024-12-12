@@ -235,13 +235,8 @@ def get_download_url(container_client, blob_name):
     """Generate a download URL for the blob that allows direct streaming"""
     try:
         blob_client = container_client.get_blob_client(blob_name)
-        # Get a short-lived URL for direct download
-        # URL will expire in 3600 seconds (1 hour)
-        sas_url = blob_client.url + '?' + container_client.get_blob_client(blob_name).generate_shared_access_signature(
-            permission='read',
-            expiry=datetime.utcnow() + timedelta(hours=1)
-        )
-        return sas_url
+        # Just use the blob URL with the existing SAS token
+        return blob_client.url
     except Exception as e:
         st.error(f"Error generating download URL: {str(e)}")
         return None
@@ -408,44 +403,46 @@ def show_file_browser():
             cols[1].markdown(f'<div class="file-row">{format_size(item.get("size", None))}</div>',
                              unsafe_allow_html=True)
             cols[2].markdown(
-                            f'<div class="file-row">{item.get("last_modified", "-").strftime("%Y-%m-%d %H:%M:%S") if item.get("last_modified") else "-"}</div>',
-                            unsafe_allow_html=True
-                        )
-            
+                f'<div class="file-row">{item.get("last_modified", "-").strftime("%Y-%m-%d %H:%M:%S") if item.get("last_modified") else "-"}</div>',
+                unsafe_allow_html=True
+            )
+
             # Actions column
-# Actions column
-with cols[3]:
-    action_cols = st.columns([1, 1])
-    if not item['is_directory']:
-        # Download button
-        with action_cols[0]:
-            download_url = get_download_url(st.session_state.container_client, item["name"])
-            if download_url:
-                st.markdown(
-                    f'<a href="{download_url}" '
-                    f'download="{display_name}" '
-                    f'class="streamlit-button stButton"><span>⬇️</span></a>',
-                    unsafe_allow_html=True
-                )
-    
-        # Delete button - this should be at the same indent level as the download section
-        with action_cols[1]:
-            if st.button("🗑️", key=f"delete_{item['name']}",
-                        help="Delete" + (" directory" if item['is_directory'] else " file")):
-                if st.session_state.get(f"confirm_delete_{item['name']}", False):
-                    # Perform deletion
-                    if item['is_directory']:
-                        if delete_directory(st.session_state.container_client, item['name']):
-                            st.success(f"Directory {display_name} deleted successfully")
-                            st.rerun()
-                    else:
-                        if delete_blob(st.session_state.container_client, item['name']):
-                            st.success(f"File {display_name} deleted successfully")
-                            st.rerun()
-                else:
-                    # Show confirmation
-                    st.session_state[f"confirm_delete_{item['name']}"] = True
-                    st.warning(f"You sure?")
+            with cols[3]:
+                action_cols = st.columns([1, 1])
+                if not item['is_directory']:
+                    # Download button
+                    with action_cols[0]:
+                        download_url = get_download_url(st.session_state.container_client, item["name"])
+                        if download_url:
+                            st.markdown(
+                                f'<a href="{download_url}" '
+                                f'target="_blank" '
+                                f'style="text-decoration: none; color: inherit;">'
+                                f'<button class="streamlit-button stButton">⬇️</button>'
+                                f'</a>',
+                                unsafe_allow_html=True
+                            )
+
+                    # Delete button
+                    with action_cols[1]:
+                        if st.button("🗑️", key=f"delete_{item['name']}",
+                                    help="Delete" + (" directory" if item['is_directory'] else " file")):
+                            if st.session_state.get(f"confirm_delete_{item['name']}", False):
+                                # Perform deletion
+                                if item['is_directory']:
+                                    if delete_directory(st.session_state.container_client, item['name']):
+                                        st.success(f"Directory {display_name} deleted successfully")
+                                        st.rerun()
+                                else:
+                                    if delete_blob(st.session_state.container_client, item['name']):
+                                        st.success(f"File {display_name} deleted successfully")
+                                        st.rerun()
+                            else:
+                                # Show confirmation
+                                st.session_state[f"confirm_delete_{item['name']}"] = True
+                                st.warning(f"Are you sure you want to delete {display_name}? Click delete button again to confirm.")
+
     # Upload section
     st.markdown('<div class="upload-section">', unsafe_allow_html=True)
     st.markdown(
