@@ -393,26 +393,15 @@ def show_file_browser():
             with cols[3]:
                 action_cols = st.columns([1, 1])
                 if not item['is_directory']:
-                    # Download button - uses session state to track download state
+                    # Download button with direct save functionality
                     with action_cols[0]:
-                        download_key = f"download_{item['name']}"
-                        if download_key not in st.session_state:
-                            st.session_state[download_key] = False
-                            
-                        # Show download button or save button based on state
-                        if not st.session_state[download_key]:
-                            if st.button("⬇️", key=f"download_btn_{item['name']}"):
-                                st.session_state[download_key] = True
-                                st.rerun()
-                        else:
-                            # Reset state after showing save button
-                            st.session_state[download_key] = False
-                            # Download the file and show save button in one place
+                        # Download and show save button immediately
+                        if st.button("⬇️", key=f"download_btn_{item['name']}"):
                             with st.spinner('Preparing download...'):
                                 blob_data = download_blob(st.session_state.container_client, item['name'])
                                 if blob_data:
                                     st.download_button(
-                                        label="⬇️",
+                                        label="Save File",
                                         data=blob_data,
                                         file_name=display_name,
                                         key=f"save_{item['name']}"
