@@ -130,7 +130,17 @@ def validate_container_access(account_name, container_name, sas_token):
         st.error(f"Connection failed: {str(e)}")
         return None, None
 
-
+def create_download_url(container_client, blob_name, expiry_hours=1):
+    """Create a download URL for the blob with a specified expiry time"""
+    try:
+        blob_client = container_client.get_blob_client(blob_name)
+        
+        # Get the SAS URL directly from the blob client
+        sas_url = blob_client.url + '?' + container_client.credential.split('?', 1)[1]
+        return sas_url
+    except Exception as e:
+        st.error(f"Error generating download URL: {str(e)}")
+        return None
 def get_directory_contents(container_client, prefix=''):
     """Get contents of current directory, properly handling the virtual directory structure"""
     try:
@@ -399,18 +409,13 @@ def show_file_browser():
                 if not item['is_directory']:
                     # Download button
                     with action_cols[0]:
-                        if st.button("⬇️", key=f"download_btn_{item['name']}"):
-                            # Only download when button is clicked
-                            with st.spinner('Downloading...'):
-                                blob_data = download_blob(st.session_state.container_client, item['name'])
-                                if blob_data:
-                                    # Use st.download_button only after user initiates download
-                                    st.download_button(
-                                        label="Save File",
-                                        data=blob_data,
-                                        file_name=display_name,
-                                        key=f"save_{item['name']}"
-                                    )
+                        download_url = create_download_url(st.session_state.container_client, item['name'])
+                        if download_url:
+                            st.markdown(
+                                f'<a href="{download_url}" download="{display_name}" '
+                                f'class="streamlit-button stButton"><span>⬇️</span></a>',
+                                unsafe_allow_html=True
+                            )
 
                 # Delete button
                 with action_cols[1]:
