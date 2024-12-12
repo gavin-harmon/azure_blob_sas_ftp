@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 from azure.storage.blob import BlobServiceClient, BlobPrefix
-from datetime import datetime
+from datetime import datetime, timedelta
 import posixpath
 
 # Page configuration
@@ -25,21 +25,43 @@ if 'show_welcome' not in st.session_state:
 # Custom styling
 st.markdown("""
     <style>
-    /* General text and elements - using CSS variables for theme colors */
-    .element-container, .stMarkdown {
-        color: var(--text-color);
-    }
-
     /* Base app styling */
     .stApp {
-        background-color: var(--background-color);
+        background-color: #f8f9fa;
+    }
+
+    /* Remove extra spaces and default padding */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
+    }
+
+    /* Hide Streamlit branding */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+
+    /* Navigation styling */
+    .navigation-bar {
+        padding: 0.5rem;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .current-path {
+        color: #6c757d;
+        padding: 0.5rem;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        margin-left: 1rem;
     }
 
     /* File browser styling */
     .file-list-header {
+        color: #6c757d;
         font-size: 0.875rem;
         padding: 0.5rem;
-        border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+        border-bottom: 1px solid #e9ecef;
     }
 
     .file-row {
@@ -51,7 +73,7 @@ st.markdown("""
     }
 
     .file-row:hover {
-        background-color: rgba(128, 128, 128, 0.1);
+        background-color: #f8f9fa;
     }
 
     /* Button styling */
@@ -60,33 +82,13 @@ st.markdown("""
         text-align: left;
         padding: 0.5rem !important;
         line-height: 1.5;
-        border: 1px solid rgba(128, 128, 128, 0.2) !important;
-        background-color: transparent !important;
+        border: none;
+        background: none;
+        margin: 0 !important;
     }
 
     .stButton button:hover {
-        background-color: rgba(128, 128, 128, 0.1) !important;
-    }
-
-    /* Input fields */
-    .stTextInput > div > div > input {
-        border: 1px solid rgba(128, 128, 128, 0.2) !important;
-    }
-
-    /* Navigation */
-    .current-path {
-        padding: 0.5rem;
-        background-color: rgba(128, 128, 128, 0.1);
-        border-radius: 4px;
-        margin-left: 1rem;
-    }
-
-    /* Upload section */
-    .upload-section {
-        padding: 1rem;
-        border-radius: 6px;
-        margin-top: 1rem;
-        border: 2px dashed rgba(128, 128, 128, 0.2);
+        background-color: #f8f9fa;
     }
 
     /* Action buttons */
@@ -98,35 +100,79 @@ st.markdown("""
     }
 
     .action-button:hover {
-        background-color: rgba(128, 128, 128, 0.1);
+        background-color: #f8f9fa;
     }
 
-    /* File icons */
-    button[key^="dir_"] {
-        color: inherit !important;
+    .delete-button {
+        color: #dc3545;
     }
 
-    /* Hide Streamlit branding */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
+    /* Upload section styling */
+    .upload-section {
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
 
-    /* Empty cell styling */
-    .empty-cell {
-        color: rgba(128, 128, 128, 0.6);
+    /* Breadcrumb styling */
+    .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem;
+        border-radius: 4px;
+    }
+
+    .breadcrumb-item {
+        color: #0d6efd;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .breadcrumb-separator {
+        color: #6c757d;
+    }
+
+    /* File/Folder icons and text */
+    .file-name {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .folder-name {
+        color: #1f77b4;
+        font-weight: 500;
+    }
+
+    /* Status messages */
+    .success-message {
+        color: #28a745;
+        padding: 0.5rem;
+        margin: 0.5rem 0;
+        border-radius: 4px;
+    }
+
+    .error-message {
+        color: #dc3545;
+        padding: 0.5rem;
+        margin: 0.5rem 0;
+        border-radius: 4px;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .file-row {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .action-button {
+            margin-top: 0.5rem;
+        }
     }
     </style>
 """, unsafe_allow_html=True)
 
-def get_download_url(container_client, blob_name):
-    """Generate a download URL for the blob that allows direct streaming"""
-    try:
-        # Get the blob client
-        blob_client = container_client.get_blob_client(blob_name)
-        return blob_client.url + container_client.credential
-    except Exception as e:
-        st.error(f"Error generating download URL: {str(e)}")
-        return None
-        
 def validate_container_access(account_name, container_name, sas_token):
     """Validate Azure credentials by attempting to list blobs in the container"""
     try:
@@ -139,7 +185,6 @@ def validate_container_access(account_name, container_name, sas_token):
         st.error(f"Connection failed: {str(e)}")
         return None, None
 
-
 def get_directory_contents(container_client, prefix=''):
     """Get contents of current directory, properly handling the virtual directory structure"""
     try:
@@ -149,8 +194,7 @@ def get_directory_contents(container_client, prefix=''):
         # Normalize prefix
         prefix = prefix if prefix.endswith('/') or prefix == '' else prefix + '/'
 
-        # Use include=['metadata', 'timestamps'] to only fetch necessary properties
-        # This significantly reduces data transfer and improves performance
+        # Use include=['metadata'] to only fetch necessary properties
         blobs = container_client.list_blobs(
             name_starts_with=prefix,
             include=['metadata']
@@ -187,6 +231,20 @@ def get_directory_contents(container_client, prefix=''):
         st.error(f"Error listing contents: {str(e)}")
         return []
 
+def get_download_url(container_client, blob_name):
+    """Generate a download URL for the blob that allows direct streaming"""
+    try:
+        blob_client = container_client.get_blob_client(blob_name)
+        # Get a short-lived URL for direct download
+        # URL will expire in 3600 seconds (1 hour)
+        sas_url = blob_client.url + '?' + container_client.get_blob_client(blob_name).generate_shared_access_signature(
+            permission='read',
+            expiry=datetime.utcnow() + timedelta(hours=1)
+        )
+        return sas_url
+    except Exception as e:
+        st.error(f"Error generating download URL: {str(e)}")
+        return None
 
 def format_size(size_in_bytes):
     """Format file size to human readable format"""
@@ -198,7 +256,6 @@ def format_size(size_in_bytes):
         size_in_bytes /= 1024
     return f"{size_in_bytes:.1f} PB"
 
-
 def upload_files(container_client, files, current_path):
     """Upload multiple files to Azure Blob Storage"""
     try:
@@ -209,46 +266,27 @@ def upload_files(container_client, files, current_path):
     except Exception as e:
         st.error(f"Error uploading files: {str(e)}")
 
-
-def download_blob(container_client, blob_name):
-    """Download a blob from Azure Storage with improved error handling and progress"""
+def delete_blob(container_client, blob_name):
+    """Delete a blob from Azure Storage"""
     try:
         blob_client = container_client.get_blob_client(blob_name)
-        
-        # First get blob properties to check size
-        properties = blob_client.get_blob_properties()
-        size_mb = properties.size / (1024 * 1024)
-               
-        # Create a progress bar for larger files
-        if size_mb > 10:  # Only show progress for files larger than 10MB
-            progress_bar = st.progress(0)
-            
-            # Download in chunks for large files
-            chunk_size = 1024 * 1024  # 1MB chunks
-            total_chunks = int(properties.size / chunk_size) + 1
-            
-            # Download stream
-            download_stream = blob_client.download_blob()
-            data = bytearray()
-            
-            for i, chunk in enumerate(download_stream.chunks()):
-                data.extend(chunk)
-                if progress_bar is not None:
-                    progress_bar.progress(min((i + 1) / total_chunks, 1.0))
-            
-            if progress_bar is not None:
-                progress_bar.empty()
-            
-            return bytes(data)
-        else:
-            # For smaller files, download directly
-            blob_data = blob_client.download_blob()
-            return blob_data.readall()
-            
+        blob_client.delete_blob()
+        return True
     except Exception as e:
-        st.error(f"Error downloading file: {str(e)}")
-        return None
+        st.error(f"Error deleting file: {str(e)}")
+        return False
 
+def delete_directory(container_client, directory_path):
+    """Delete all blobs within a directory"""
+    try:
+        # List all blobs in directory
+        blobs = container_client.list_blobs(name_starts_with=directory_path)
+        for blob in blobs:
+            container_client.delete_blob(blob.name)
+        return True
+    except Exception as e:
+        st.error(f"Error deleting directory: {str(e)}")
+        return False
 
 def show_navigation():
     """Display the navigation bar with path and controls"""
@@ -280,7 +318,6 @@ def show_navigation():
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-
 def show_welcome_screen():
     """Display welcome screen with instructions"""
     st.header("Welcome to Azure Blob Storage Explorer")
@@ -301,7 +338,6 @@ def show_welcome_screen():
     ### Security Note
     Your connection credentials are not stored and are only used for the current session.
     """)
-
 
 def show_sidebar():
     """Display sidebar with connection controls"""
@@ -333,32 +369,6 @@ def show_sidebar():
                 st.rerun()
 
         st.write("Status:", "🟢 Connected" if st.session_state.connected else "🔴 Disconnected")
-
-
-def delete_blob(container_client, blob_name):
-    """Delete a blob from Azure Storage"""
-    try:
-        blob_client = container_client.get_blob_client(blob_name)
-        blob_client.delete_blob()
-        return True
-    except Exception as e:
-        st.error(f"Error deleting file: {str(e)}")
-        return False
-
-def delete_directory(container_client, directory_path):
-    """Delete all blobs within a directory"""
-    try:
-        # List all blobs in directory
-        blobs = container_client.list_blobs(name_starts_with=directory_path)
-        for blob in blobs:
-            container_client.delete_blob(blob.name)
-        return True
-    except Exception as e:
-        st.error(f"Error deleting directory: {str(e)}")
-        return False
-
-
-
 
 def show_file_browser():
     """Display the file browser interface"""
@@ -397,7 +407,7 @@ def show_file_browser():
             # Size and modification date
             cols[1].markdown(f'<div class="file-row">{format_size(item.get("size", None))}</div>',
                              unsafe_allow_html=True)
-            cols[2].markdown(
+cols[2].markdown(
                 f'<div class="file-row">{item.get("last_modified", "-").strftime("%Y-%m-%d %H:%M:%S") if item.get("last_modified") else "-"}</div>',
                 unsafe_allow_html=True
             )
@@ -408,12 +418,14 @@ def show_file_browser():
                 if not item['is_directory']:
                     # Download button
                     with action_cols[0]:
-                        st.markdown(
-                            f'<a href="{get_download_url(st.session_state.container_client, item["name"])}" '
-                            f'download="{display_name}" '
-                            f'class="streamlit-button stButton"><span>⬇️</span></a>',
-                            unsafe_allow_html=True
-                        )
+                        download_url = get_download_url(st.session_state.container_client, item["name"])
+                        if download_url:
+                            st.markdown(
+                                f'<a href="{download_url}" '
+                                f'download="{display_name}" '
+                                f'class="streamlit-button stButton"><span>⬇️</span></a>',
+                                unsafe_allow_html=True
+                            )
 
                 # Delete button
                 with action_cols[1]:
@@ -433,8 +445,7 @@ def show_file_browser():
                             # Show confirmation
                             st.session_state[f"confirm_delete_{item['name']}"] = True
                             st.warning(
-                                f"You sure?")
-
+                                f"Are you sure you want to delete {display_name}? Click delete button again to confirm.")
 
     # Upload section
     st.markdown('<div class="upload-section">', unsafe_allow_html=True)
@@ -447,10 +458,6 @@ def show_file_browser():
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-
-
-
-
 def main():
     show_sidebar()
 
@@ -458,7 +465,6 @@ def main():
         show_welcome_screen()
     elif st.session_state.connected:
         show_file_browser()
-
 
 if __name__ == "__main__":
     main()
