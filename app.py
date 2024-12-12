@@ -1,10 +1,8 @@
 import streamlit as st
 import os
 from azure.storage.blob import BlobServiceClient, BlobPrefix
-from datetime import datetime
+from datetime import datetime, timedelta
 import posixpath
-
-
 
 # Page configuration
 st.set_page_config(
@@ -24,7 +22,6 @@ if 'current_path' not in st.session_state:
 if 'show_welcome' not in st.session_state:
     st.session_state.show_welcome = True
 
-# Custom styling
 # Custom styling
 st.markdown("""
     <style>
@@ -176,16 +173,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-def format_size(size_in_bytes):
-    """Format file size to human readable format"""
-    if size_in_bytes is None:
-        return "-"
-    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
-        if size_in_bytes < 1024:
-            return f"{size_in_bytes:.1f} {unit}"
-        size_in_bytes /= 1024
-    return f"{size_in_bytes:.1f} PB"
-    
 def validate_container_access(account_name, container_name, sas_token):
     """Validate Azure credentials by attempting to list blobs in the container"""
     try:
@@ -198,7 +185,6 @@ def validate_container_access(account_name, container_name, sas_token):
         st.error(f"Connection failed: {str(e)}")
         return None, None
 
-
 def get_directory_contents(container_client, prefix=''):
     """Get contents of current directory, properly handling the virtual directory structure"""
     try:
@@ -208,8 +194,7 @@ def get_directory_contents(container_client, prefix=''):
         # Normalize prefix
         prefix = prefix if prefix.endswith('/') or prefix == '' else prefix + '/'
 
-        # Use include=['metadata', 'timestamps'] to only fetch necessary properties
-        # This significantly reduces data transfer and improves performance
+        # Use include=['metadata'] to only fetch necessary properties
         blobs = container_client.list_blobs(
             name_starts_with=prefix,
             include=['metadata']
@@ -246,48 +231,25 @@ def get_directory_contents(container_client, prefix=''):
         st.error(f"Error listing contents: {str(e)}")
         return []
 
-def download_blob(container_client, blob_name):
-    """Download a blob from Azure Storage with improved error handling and progress"""
+def get_download_url(container_client, blob_name):
+    """Generate a download URL for the blob that allows direct streaming"""
     try:
         blob_client = container_client.get_blob_client(blob_name)
-        
-        # First get blob properties to check size
-        properties = blob_client.get_blob_properties()
-        size_mb = properties.size / (1024 * 1024)
-        
-        # Add a warning for large files
-        if size_mb > 100:  # Warning for files larger than 100MB
-            st.warning(f"Large file detected ({size_mb:.1f}MB). Download may take some time.")
-        
-        # Create a progress bar for larger files
-        if size_mb > 10:  # Only show progress for files larger than 10MB
-            progress_bar = st.progress(0)
-            
-            # Download in chunks for large files
-            chunk_size = 1024 * 1024  # 1MB chunks
-            total_chunks = int(properties.size / chunk_size) + 1
-            
-            # Download stream
-            download_stream = blob_client.download_blob()
-            data = bytearray()
-            
-            for i, chunk in enumerate(download_stream.chunks()):
-                data.extend(chunk)
-                if progress_bar is not None:
-                    progress_bar.progress(min((i + 1) / total_chunks, 1.0))
-            
-            if progress_bar is not None:
-                progress_bar.empty()
-            
-            return bytes(data)
-        else:
-            # For smaller files, download directly
-            blob_data = blob_client.download_blob()
-            return blob_data.readall()
-            
+        # Just use the blob URL with the existing SAS token
+        return blob_client.url
     except Exception as e:
-        st.error(f"Error downloading file: {str(e)}")
+        st.error(f"Error generating download URL: {str(e)}")
         return None
+
+def format_size(size_in_bytes):
+    """Format file size to human readable format"""
+    if size_in_bytes is None:
+        return "-"
+    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+        if size_in_bytes < 1024:
+            return f"{size_in_bytes:.1f} {unit}"
+        size_in_bytes /= 1024
+    return f"{size_in_bytes:.1f} PB"
 
 def upload_files(container_client, files, current_path):
     """Upload multiple files to Azure Blob Storage"""
@@ -299,6 +261,27 @@ def upload_files(container_client, files, current_path):
     except Exception as e:
         st.error(f"Error uploading files: {str(e)}")
 
+def delete_blob(container_client, blob_name):
+    """Delete a blob from Azure Storage"""
+    try:
+        blob_client = container_client.get_blob_client(blob_name)
+        blob_client.delete_blob()
+        return True
+    except Exception as e:
+        st.error(f"Error deleting file: {str(e)}")
+        return False
+
+def delete_directory(container_client, directory_path):
+    """Delete all blobs within a directory"""
+    try:
+        # List all blobs in directory
+        blobs = container_client.list_blobs(name_starts_with=directory_path)
+        for blob in blobs:
+            container_client.delete_blob(blob.name)
+        return True
+    except Exception as e:
+        st.error(f"Error deleting directory: {str(e)}")
+        return False
 
 def show_navigation():
     """Display the navigation bar with path and controls"""
@@ -330,17 +313,6 @@ def show_navigation():
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Current path display
-    with cols[1]:
-        if st.session_state.current_path:
-            st.markdown(f'<div class="current-path">/{st.session_state.current_path}</div>',
-                        unsafe_allow_html=True)
-        else:
-            st.markdown('<div class="current-path">/</div>', unsafe_allow_html=True)
-
-    st.markdown('</div>', unsafe_allow_html=True)
-
-
 def show_welcome_screen():
     """Display welcome screen with instructions"""
     st.header("Welcome to Azure Blob Storage Explorer")
@@ -361,7 +333,6 @@ def show_welcome_screen():
     ### Security Note
     Your connection credentials are not stored and are only used for the current session.
     """)
-
 
 def show_sidebar():
     """Display sidebar with connection controls"""
@@ -393,32 +364,6 @@ def show_sidebar():
                 st.rerun()
 
         st.write("Status:", "🟢 Connected" if st.session_state.connected else "🔴 Disconnected")
-
-
-def delete_blob(container_client, blob_name):
-    """Delete a blob from Azure Storage"""
-    try:
-        blob_client = container_client.get_blob_client(blob_name)
-        blob_client.delete_blob()
-        return True
-    except Exception as e:
-        st.error(f"Error deleting file: {str(e)}")
-        return False
-
-def delete_directory(container_client, directory_path):
-    """Delete all blobs within a directory"""
-    try:
-        # List all blobs in directory
-        blobs = container_client.list_blobs(name_starts_with=directory_path)
-        for blob in blobs:
-            container_client.delete_blob(blob.name)
-        return True
-    except Exception as e:
-        st.error(f"Error deleting directory: {str(e)}")
-        return False
-
-
-
 
 def show_file_browser():
     """Display the file browser interface"""
@@ -468,38 +413,35 @@ def show_file_browser():
                 if not item['is_directory']:
                     # Download button
                     with action_cols[0]:
-                        if st.button("⬇️", key=f"download_btn_{item['name']}"):
-                            # Only download when button is clicked
-                            with st.spinner('Downloading...'):
-                                blob_data = download_blob(st.session_state.container_client, item['name'])
-                                if blob_data:
-                                    # Use st.download_button only after user initiates download
-                                    st.download_button(
-                                        label="Save File",
-                                        data=blob_data,
-                                        file_name=display_name,
-                                        key=f"save_{item['name']}"
-                                    )
+                        download_url = get_download_url(st.session_state.container_client, item["name"])
+                        if download_url:
+                            st.markdown(
+                                f'<a href="{download_url}" '
+                                f'target="_blank" '
+                                f'style="text-decoration: none; color: inherit;">'
+                                f'<button class="streamlit-button stButton">⬇️</button>'
+                                f'</a>',
+                                unsafe_allow_html=True
+                            )
 
-                # Delete button
-                with action_cols[1]:
-                    if st.button("🗑️", key=f"delete_{item['name']}",
-                                 help="Delete" + (" directory" if item['is_directory'] else " file")):
-                        if st.session_state.get(f"confirm_delete_{item['name']}", False):
-                            # Perform deletion
-                            if item['is_directory']:
-                                if delete_directory(st.session_state.container_client, item['name']):
-                                    st.success(f"Directory {display_name} deleted successfully")
-                                    st.rerun()
+                    # Delete button
+                    with action_cols[1]:
+                        if st.button("🗑️", key=f"delete_{item['name']}",
+                                    help="Delete" + (" directory" if item['is_directory'] else " file")):
+                            if st.session_state.get(f"confirm_delete_{item['name']}", False):
+                                # Perform deletion
+                                if item['is_directory']:
+                                    if delete_directory(st.session_state.container_client, item['name']):
+                                        st.success(f"Directory {display_name} deleted successfully")
+                                        st.rerun()
+                                else:
+                                    if delete_blob(st.session_state.container_client, item['name']):
+                                        st.success(f"File {display_name} deleted successfully")
+                                        st.rerun()
                             else:
-                                if delete_blob(st.session_state.container_client, item['name']):
-                                    st.success(f"File {display_name} deleted successfully")
-                                    st.rerun()
-                        else:
-                            # Show confirmation
-                            st.session_state[f"confirm_delete_{item['name']}"] = True
-                            st.warning(
-                                f"You sure?")
+                                # Show confirmation
+                                st.session_state[f"confirm_delete_{item['name']}"] = True
+                                st.warning(f"Are you sure you want to delete {display_name}? Click delete button again to confirm.")
 
     # Upload section
     st.markdown('<div class="upload-section">', unsafe_allow_html=True)
@@ -512,16 +454,13 @@ def show_file_browser():
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-
-
-
 def main():
     show_sidebar()
+
     if st.session_state.show_welcome and not st.session_state.connected:
         show_welcome_screen()
     elif st.session_state.connected:
         show_file_browser()
-
 
 if __name__ == "__main__":
     main()
