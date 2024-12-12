@@ -244,7 +244,7 @@ def download_blob(container_client, blob_name):
 def show_navigation():
     """Display the navigation bar with path and controls"""
     st.markdown('<div class="navigation-bar">', unsafe_allow_html=True)
-    cols = st.columns([1, 6])
+    cols = st.columns([1, 6, 1])  # Added a column for refresh button
 
     # Back button
     with cols[0]:
@@ -263,6 +263,11 @@ def show_navigation():
                         unsafe_allow_html=True)
         else:
             st.markdown('<div class="current-path">/</div>', unsafe_allow_html=True)
+
+    # Refresh button
+    with cols[2]:
+        if st.button("🔄 Refresh"):
+            st.rerun()
 
     st.markdown('</div>', unsafe_allow_html=True)
 
