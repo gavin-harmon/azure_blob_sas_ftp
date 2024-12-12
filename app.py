@@ -4,6 +4,8 @@ from azure.storage.blob import BlobServiceClient, BlobPrefix
 from datetime import datetime
 import posixpath
 
+
+
 # Page configuration
 st.set_page_config(
     page_title="Azure Blob Storage Explorer",
@@ -23,23 +25,46 @@ if 'show_welcome' not in st.session_state:
     st.session_state.show_welcome = True
 
 # Custom styling
+# Custom styling
 st.markdown("""
     <style>
-    /* General text and elements - using CSS variables for theme colors */
-    .element-container, .stMarkdown {
-        color: var(--text-color);
-    }
-
     /* Base app styling */
     .stApp {
-        background-color: var(--background-color);
+        background-color: #f8f9fa;
+    }
+
+    /* Remove extra spaces and default padding */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
+    }
+
+    /* Hide Streamlit branding */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+
+    /* Navigation styling */
+    .navigation-bar {
+        padding: 0.5rem;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .current-path {
+        color: #6c757d;
+        padding: 0.5rem;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        margin-left: 1rem;
     }
 
     /* File browser styling */
     .file-list-header {
+        color: #6c757d;
         font-size: 0.875rem;
         padding: 0.5rem;
-        border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+        border-bottom: 1px solid #e9ecef;
     }
 
     .file-row {
@@ -51,7 +76,7 @@ st.markdown("""
     }
 
     .file-row:hover {
-        background-color: rgba(128, 128, 128, 0.1);
+        background-color: #f8f9fa;
     }
 
     /* Button styling */
@@ -60,33 +85,13 @@ st.markdown("""
         text-align: left;
         padding: 0.5rem !important;
         line-height: 1.5;
-        border: 1px solid rgba(128, 128, 128, 0.2) !important;
-        background-color: transparent !important;
+        border: none;
+        background: none;
+        margin: 0 !important;
     }
 
     .stButton button:hover {
-        background-color: rgba(128, 128, 128, 0.1) !important;
-    }
-
-    /* Input fields */
-    .stTextInput > div > div > input {
-        border: 1px solid rgba(128, 128, 128, 0.2) !important;
-    }
-
-    /* Navigation */
-    .current-path {
-        padding: 0.5rem;
-        background-color: rgba(128, 128, 128, 0.1);
-        border-radius: 4px;
-        margin-left: 1rem;
-    }
-
-    /* Upload section */
-    .upload-section {
-        padding: 1rem;
-        border-radius: 6px;
-        margin-top: 1rem;
-        border: 2px dashed rgba(128, 128, 128, 0.2);
+        background-color: #f8f9fa;
     }
 
     /* Action buttons */
@@ -98,49 +103,80 @@ st.markdown("""
     }
 
     .action-button:hover {
-        background-color: rgba(128, 128, 128, 0.1);
+        background-color: #f8f9fa;
     }
 
-    /* File icons */
-    button[key^="dir_"] {
-        color: inherit !important;
+    .delete-button {
+        color: #dc3545;
     }
 
-    /* Hide Streamlit branding */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
+    /* Upload section styling */
+    .upload-section {
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
 
-    /* Empty cell styling */
-    .empty-cell {
-        color: rgba(128, 128, 128, 0.6);
+    /* Breadcrumb styling */
+    .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem;
+        border-radius: 4px;
+    }
+
+    .breadcrumb-item {
+        color: #0d6efd;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .breadcrumb-separator {
+        color: #6c757d;
+    }
+
+    /* File/Folder icons and text */
+    .file-name {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .folder-name {
+        color: #1f77b4;
+        font-weight: 500;
+    }
+
+    /* Status messages */
+    .success-message {
+        color: #28a745;
+        padding: 0.5rem;
+        margin: 0.5rem 0;
+        border-radius: 4px;
+    }
+
+    .error-message {
+        color: #dc3545;
+        padding: 0.5rem;
+        margin: 0.5rem 0;
+        border-radius: 4px;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .file-row {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .action-button {
+            margin-top: 0.5rem;
+        }
     }
     </style>
 """, unsafe_allow_html=True)
 
-def get_download_url(container_client, blob_name):
-    """Generate a download URL for the blob that allows direct streaming"""
-    try:
-        # Get the account name from the container client's URL
-        account_name = container_client.account_name
-        
-        # Generate SAS token for this specific blob with download permission
-        sas_token = generate_blob_sas(
-            account_name=account_name,
-            container_name=container_client.container_name,
-            blob_name=blob_name,
-            account_key=None,  # Not needed when using SAS token
-            permission=BlobSasPermissions(read=True),  # Only allow read permission
-            expiry=datetime.utcnow() + timedelta(hours=1),  # URL expires in 1 hour
-            sas_token=container_client.credential.split('?')[-1]  # Extract the SAS token part
-        )
-        
-        # Construct the full URL
-        blob_client = container_client.get_blob_client(blob_name)
-        return f"{blob_client.url}?{sas_token}"
-    except Exception as e:
-        st.error(f"Error generating download URL: {str(e)}")
-        return None
-        
+
 def validate_container_access(account_name, container_name, sas_token):
     """Validate Azure credentials by attempting to list blobs in the container"""
     try:
@@ -201,29 +237,6 @@ def get_directory_contents(container_client, prefix=''):
         st.error(f"Error listing contents: {str(e)}")
         return []
 
-
-def format_size(size_in_bytes):
-    """Format file size to human readable format"""
-    if size_in_bytes is None:
-        return "-"
-    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
-        if size_in_bytes < 1024:
-            return f"{size_in_bytes:.1f} {unit}"
-        size_in_bytes /= 1024
-    return f"{size_in_bytes:.1f} PB"
-
-
-def upload_files(container_client, files, current_path):
-    """Upload multiple files to Azure Blob Storage"""
-    try:
-        for file in files:
-            blob_name = posixpath.join(current_path, file.name).lstrip('/')
-            container_client.upload_blob(name=blob_name, data=file, overwrite=True)
-            st.success(f"Successfully uploaded {file.name}")
-    except Exception as e:
-        st.error(f"Error uploading files: {str(e)}")
-
-
 def download_blob(container_client, blob_name):
     """Download a blob from Azure Storage with improved error handling and progress"""
     try:
@@ -232,7 +245,11 @@ def download_blob(container_client, blob_name):
         # First get blob properties to check size
         properties = blob_client.get_blob_properties()
         size_mb = properties.size / (1024 * 1024)
-               
+        
+        # Add a warning for large files
+        if size_mb > 100:  # Warning for files larger than 100MB
+            st.warning(f"Large file detected ({size_mb:.1f}MB). Download may take some time.")
+        
         # Create a progress bar for larger files
         if size_mb > 10:  # Only show progress for files larger than 10MB
             progress_bar = st.progress(0)
@@ -259,6 +276,27 @@ def download_blob(container_client, blob_name):
             blob_data = blob_client.download_blob()
             return blob_data.readall()
             
+    except Exception as e:
+        st.error(f"Error downloading file: {str(e)}")
+        return None
+
+def upload_files(container_client, files, current_path):
+    """Upload multiple files to Azure Blob Storage"""
+    try:
+        for file in files:
+            blob_name = posixpath.join(current_path, file.name).lstrip('/')
+            container_client.upload_blob(name=blob_name, data=file, overwrite=True)
+            st.success(f"Successfully uploaded {file.name}")
+    except Exception as e:
+        st.error(f"Error uploading files: {str(e)}")
+
+
+def download_blob(container_client, blob_name):
+    """Download a blob from Azure Storage"""
+    try:
+        blob_client = container_client.get_blob_client(blob_name)
+        blob_data = blob_client.download_blob()
+        return blob_data.readall()
     except Exception as e:
         st.error(f"Error downloading file: {str(e)}")
         return None
@@ -291,6 +329,16 @@ def show_navigation():
     with cols[2]:
         if st.button("🔄 Refresh"):
             st.rerun()
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # Current path display
+    with cols[1]:
+        if st.session_state.current_path:
+            st.markdown(f'<div class="current-path">/{st.session_state.current_path}</div>',
+                        unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="current-path">/</div>', unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -422,12 +470,18 @@ def show_file_browser():
                 if not item['is_directory']:
                     # Download button
                     with action_cols[0]:
-                        st.markdown(
-                            f'<a href="{get_download_url(st.session_state.container_client, item["name"])}" '
-                            f'download="{display_name}" '
-                            f'class="streamlit-button stButton"><span>⬇️</span></a>',
-                            unsafe_allow_html=True
-                        )
+                        if st.button("⬇️", key=f"download_btn_{item['name']}"):
+                            # Only download when button is clicked
+                            with st.spinner('Downloading...'):
+                                blob_data = download_blob(st.session_state.container_client, item['name'])
+                                if blob_data:
+                                    # Use st.download_button only after user initiates download
+                                    st.download_button(
+                                        label="Save File",
+                                        data=blob_data,
+                                        file_name=display_name,
+                                        key=f"save_{item['name']}"
+                                    )
 
                 # Delete button
                 with action_cols[1]:
@@ -448,7 +502,6 @@ def show_file_browser():
                             st.session_state[f"confirm_delete_{item['name']}"] = True
                             st.warning(
                                 f"You sure?")
-
 
     # Upload section
     st.markdown('<div class="upload-section">', unsafe_allow_html=True)
