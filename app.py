@@ -3,9 +3,6 @@ import os
 from azure.storage.blob import BlobServiceClient, BlobPrefix
 from datetime import datetime
 import posixpath
-from azure.storage.blob import generate_blob_sas, BlobSasPermissions
-from datetime import datetime, timedelta
-
 
 # Page configuration
 st.set_page_config(
@@ -120,7 +117,16 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-
+def get_download_url(container_client, blob_name):
+    """Generate a download URL for the blob that allows direct streaming"""
+    try:
+        # Get the blob client
+        blob_client = container_client.get_blob_client(blob_name)
+        return blob_client.url + container_client.credential
+    except Exception as e:
+        st.error(f"Error generating download URL: {str(e)}")
+        return None
+        
 def validate_container_access(account_name, container_name, sas_token):
     """Validate Azure credentials by attempting to list blobs in the container"""
     try:
@@ -133,39 +139,7 @@ def validate_container_access(account_name, container_name, sas_token):
         st.error(f"Connection failed: {str(e)}")
         return None, None
 
-def create_download_url(container_client, blob_name, expiry_hours=1):
-    """Create a download URL for the blob with a specified expiry time"""
-    try:
-        # Get the blob client
-        blob_client = container_client.get_blob_client(blob_name)
-        
-        # Check if the credential is a SAS token
-        if hasattr(container_client, 'credential') and container_client.credential:
-            if isinstance(container_client.credential, str):
-                # If it's a string, it's likely a SAS token
-                # Remove the leading '?' if present
-                sas_token = container_client.credential.lstrip('?')
-                return f"{blob_client.url}?{sas_token}"
-            else:
-                # For other credential types (like connection string)
-                # Generate a temporary SAS token
-                sas_token = generate_blob_sas(
-                    account_name=container_client.account_name,
-                    container_name=container_client.container_name,
-                    blob_name=blob_name,
-                    account_key=container_client._container_client._client._pipeline._transport.credential.account_key,
-                    permission=BlobSasPermissions(read=True),
-                    expiry=datetime.utcnow() + timedelta(hours=expiry_hours)
-                )
-                return f"{blob_client.url}?{sas_token}"
-        
-        st.error("No valid credentials found for generating download URL")
-        return None
-        
-    except Exception as e:
-        st.error(f"Error generating download URL: {str(e)}")
-        return None
-        
+
 def get_directory_contents(container_client, prefix=''):
     """Get contents of current directory, properly handling the virtual directory structure"""
     try:
@@ -434,16 +408,12 @@ def show_file_browser():
                 if not item['is_directory']:
                     # Download button
                     with action_cols[0]:
-                        download_url = create_download_url(st.session_state.container_client, item['name'])
-                        if download_url:
-                            # Create a button that looks like the download icon but triggers a download
-                            st.markdown(
-                                f'<a href="{download_url}" download="{display_name}" '
-                                f'class="streamlit-button stButton">'
-                                f'<span style="text-decoration: none;">⬇️</span></a>',
-                                unsafe_allow_html=True
-                            )
-                                        
+                        st.markdown(
+                            f'<a href="{get_download_url(st.session_state.container_client, item["name"])}" '
+                            f'download="{display_name}" '
+                            f'class="streamlit-button stButton"><span>⬇️</span></a>',
+                            unsafe_allow_html=True
+                        )
 
                 # Delete button
                 with action_cols[1]:
