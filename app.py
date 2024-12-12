@@ -357,8 +357,6 @@ def show_file_browser():
     # Show navigation
     show_navigation()
 
-
-
     # File browser section
     st.markdown('<div class="file-browser">', unsafe_allow_html=True)
 
@@ -400,14 +398,18 @@ def show_file_browser():
                 if not item['is_directory']:
                     # Download button
                     with action_cols[0]:
-                        blob_data = download_blob(st.session_state.container_client, item['name'])
-                        if blob_data:
-                            st.download_button(
-                                label="⬇️",
-                                data=blob_data,
-                                file_name=display_name,
-                                key=f"download_{item['name']}"
-                            )
+                        if st.button("⬇️", key=f"download_btn_{item['name']}"):
+                            # Only download when button is clicked
+                            with st.spinner('Downloading...'):
+                                blob_data = download_blob(st.session_state.container_client, item['name'])
+                                if blob_data:
+                                    # Use st.download_button only after user initiates download
+                                    st.download_button(
+                                        label="Save File",
+                                        data=blob_data,
+                                        file_name=display_name,
+                                        key=f"save_{item['name']}"
+                                    )
 
                 # Delete button
                 with action_cols[1]:
@@ -428,6 +430,7 @@ def show_file_browser():
                             st.session_state[f"confirm_delete_{item['name']}"] = True
                             st.warning(
                                 f"You sure?")
+
 
     # Upload section
     st.markdown('<div class="upload-section">', unsafe_allow_html=True)
