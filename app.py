@@ -517,10 +517,8 @@ def show_file_browser():
 
 
 
-
 def main():
     show_sidebar()
-
     if st.session_state.show_welcome and not st.session_state.connected:
         show_welcome_screen()
     elif st.session_state.connected:
