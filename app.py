@@ -209,32 +209,28 @@ def download_blob(container_client, blob_name):
         # First get blob properties to check size
         properties = blob_client.get_blob_properties()
         size_mb = properties.size / (1024 * 1024)
-               
-        # Create a progress bar for larger files
-        if size_mb > 10:  # Only show progress for files larger than 10MB
-            progress_bar = st.progress(0)
-            
-            # Download in chunks for large files
-            chunk_size = 1024 * 1024  # 1MB chunks
-            total_chunks = int(properties.size / chunk_size) + 1
-            
-            # Download stream
-            download_stream = blob_client.download_blob()
-            data = bytearray()
-            
-            for i, chunk in enumerate(download_stream.chunks()):
-                data.extend(chunk)
-                if progress_bar is not None:
-                    progress_bar.progress(min((i + 1) / total_chunks, 1.0))
-            
-            if progress_bar is not None:
-                progress_bar.empty()
-            
-            return bytes(data)
-        else:
-            # For smaller files, download directly
-            blob_data = blob_client.download_blob()
-            return blob_data.readall()
+        
+        # Create a progress bar container that we can update
+        progress_container = st.empty()
+        
+        # Download in chunks for all files
+        chunk_size = 1024 * 1024  # 1MB chunks
+        total_chunks = int(properties.size / chunk_size) + 1
+        
+        # Download stream
+        download_stream = blob_client.download_blob()
+        data = bytearray()
+        
+        for i, chunk in enumerate(download_stream.chunks()):
+            data.extend(chunk)
+            # Update progress for files larger than 1MB
+            if size_mb > 1:
+                progress_container.progress(min((i + 1) / total_chunks, 1.0))
+        
+        # Clear the progress bar
+        progress_container.empty()
+        
+        return bytes(data)
             
     except Exception as e:
         st.error(f"Error downloading file: {str(e)}")
@@ -397,16 +393,26 @@ def show_file_browser():
             with cols[3]:
                 action_cols = st.columns([1, 1])
                 if not item['is_directory']:
-                    # Download button
+                    # Download button - uses session state to track download state
                     with action_cols[0]:
-                        if st.button("⬇️", key=f"download_btn_{item['name']}"):
-                            # Only download when button is clicked
-                            with st.spinner('Downloading...'):
+                        download_key = f"download_{item['name']}"
+                        if download_key not in st.session_state:
+                            st.session_state[download_key] = False
+                            
+                        # Show download button or save button based on state
+                        if not st.session_state[download_key]:
+                            if st.button("⬇️", key=f"download_btn_{item['name']}"):
+                                st.session_state[download_key] = True
+                                st.rerun()
+                        else:
+                            # Reset state after showing save button
+                            st.session_state[download_key] = False
+                            # Download the file and show save button in one place
+                            with st.spinner('Preparing download...'):
                                 blob_data = download_blob(st.session_state.container_client, item['name'])
                                 if blob_data:
-                                    # Use st.download_button only after user initiates download
                                     st.download_button(
-                                        label="Save File",
+                                        label="⬇️",
                                         data=blob_data,
                                         file_name=display_name,
                                         key=f"save_{item['name']}"
