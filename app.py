@@ -442,8 +442,8 @@ def show_file_browser():
                                 f'class="streamlit-button stButton">'
                                 f'<span style="text-decoration: none;">⬇️</span></a>',
                                 unsafe_allow_html=True
-                            )afe_allow_html=True
-                                        )
+                            )
+                                        
 
                 # Delete button
                 with action_cols[1]:
