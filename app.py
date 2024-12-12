@@ -407,11 +407,11 @@ def show_file_browser():
             # Size and modification date
             cols[1].markdown(f'<div class="file-row">{format_size(item.get("size", None))}</div>',
                              unsafe_allow_html=True)
-cols[2].markdown(
-                f'<div class="file-row">{item.get("last_modified", "-").strftime("%Y-%m-%d %H:%M:%S") if item.get("last_modified") else "-"}</div>',
-                unsafe_allow_html=True
-            )
-
+            cols[2].markdown(
+                            f'<div class="file-row">{item.get("last_modified", "-").strftime("%Y-%m-%d %H:%M:%S") if item.get("last_modified") else "-"}</div>',
+                            unsafe_allow_html=True
+                        )
+            
             # Actions column
             with cols[3]:
                 action_cols = st.columns([1, 1])
@@ -426,7 +426,7 @@ cols[2].markdown(
                                 f'class="streamlit-button stButton"><span>⬇️</span></a>',
                                 unsafe_allow_html=True
                             )
-
+            
                 # Delete button
                 with action_cols[1]:
                     if st.button("🗑️", key=f"delete_{item['name']}",
