@@ -121,8 +121,9 @@ def get_download_url(container_client, blob_name):
     """Generate a download URL for the blob that allows direct streaming"""
     try:
         blob_client = container_client.get_blob_client(blob_name)
-        # Just append the existing SAS token that was used for the container
-        sas_token = container_client.credential
+        # Get the SAS token and remove any leading '?' if present
+        sas_token = container_client.credential.lstrip('?')
+        # Construct the full URL ensuring proper formatting
         return f"{blob_client.url}?{sas_token}"
     except Exception as e:
         st.error(f"Error generating download URL: {str(e)}")
