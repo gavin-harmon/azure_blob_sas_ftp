@@ -121,16 +121,13 @@ def get_download_url(container_client, blob_name):
     """Generate a download URL for the blob that allows direct streaming"""
     try:
         blob_client = container_client.get_blob_client(blob_name)
-        # Get a short-lived URL for direct download
-        # URL will expire in 3600 seconds (1 hour)
-        sas_url = blob_client.url + '?' + container_client.get_blob_client(blob_name).generate_shared_access_signature(
-            permission='read',
-            expiry=datetime.utcnow() + timedelta(hours=1)
-        )
-        return sas_url
+        # Just append the existing SAS token that was used for the container
+        sas_token = container_client.credential
+        return f"{blob_client.url}?{sas_token}"
     except Exception as e:
         st.error(f"Error generating download URL: {str(e)}")
         return None
+        
 def validate_container_access(account_name, container_name, sas_token):
     """Validate Azure credentials by attempting to list blobs in the container"""
     try:
