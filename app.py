@@ -209,11 +209,7 @@ def download_blob(container_client, blob_name):
         # First get blob properties to check size
         properties = blob_client.get_blob_properties()
         size_mb = properties.size / (1024 * 1024)
-        
-        # Add a warning for large files
-        if size_mb > 100:  # Warning for files larger than 100MB
-            st.warning(f"Large file detected ({size_mb:.1f}MB). Download may take some time.")
-        
+               
         # Create a progress bar for larger files
         if size_mb > 10:  # Only show progress for files larger than 10MB
             progress_bar = st.progress(0)
