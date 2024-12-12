@@ -120,11 +120,9 @@ st.markdown("""
 def get_download_url(container_client, blob_name):
     """Generate a download URL for the blob that allows direct streaming"""
     try:
+        # Get the blob client
         blob_client = container_client.get_blob_client(blob_name)
-        # Get the SAS token and remove any leading '?' if present
-        sas_token = container_client.credential.lstrip('?')
-        # Construct the full URL ensuring proper formatting
-        return f"{blob_client.url}?{sas_token}"
+        return blob_client.url + container_client.credential
     except Exception as e:
         st.error(f"Error generating download URL: {str(e)}")
         return None
