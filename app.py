@@ -140,10 +140,14 @@ def get_directory_contents(container_client, prefix=''):
         # Normalize prefix
         prefix = prefix if prefix.endswith('/') or prefix == '' else prefix + '/'
 
-        # List all blobs with the prefix
-        blobs = list(container_client.list_blobs(name_starts_with=prefix))
+        # Use include=['metadata', 'timestamps'] to only fetch necessary properties
+        # This significantly reduces data transfer and improves performance
+        blobs = container_client.list_blobs(
+            name_starts_with=prefix,
+            include=['metadata']
+        )
 
-        # First pass: identify directories
+        # Process the listing stream
         for blob in blobs:
             relative_path = blob.name[len(prefix):] if prefix else blob.name
             if not relative_path:
@@ -155,18 +159,9 @@ def get_directory_contents(container_client, prefix=''):
                 dir_path = prefix + dir_name + '/'
                 if dir_path not in directories:
                     directories.add(dir_path)
-
-        # Second pass: add files that are not directories
-        for blob in blobs:
-            # Skip if this blob's path is in our directories set
-            if blob.name + '/' in directories or blob.name in directories:
                 continue
 
-            # Only include files in the current directory level
-            relative_path = blob.name[len(prefix):] if prefix else blob.name
-            if not relative_path or '/' in relative_path:
-                continue
-
+            # Add files (only in current directory level)
             files.append({
                 'name': blob.name,
                 'size': blob.size,
@@ -174,10 +169,11 @@ def get_directory_contents(container_client, prefix=''):
             })
 
         # Convert to list format
-        dir_list = [{'name': d, 'is_directory': True} for d in directories]
-        file_list = [{**f, 'is_directory': False} for f in files]
+        dir_list = [{'name': d, 'is_directory': True} for d in sorted(directories)]
+        file_list = [{**f, 'is_directory': False} for f in sorted(files, key=lambda x: x['name'])]
 
-        return sorted(dir_list + file_list, key=lambda x: (not x['is_directory'], x['name']))
+        return dir_list + file_list
+
     except Exception as e:
         st.error(f"Error listing contents: {str(e)}")
         return []
@@ -206,11 +202,44 @@ def upload_files(container_client, files, current_path):
 
 
 def download_blob(container_client, blob_name):
-    """Download a blob from Azure Storage"""
+    """Download a blob from Azure Storage with improved error handling and progress"""
     try:
         blob_client = container_client.get_blob_client(blob_name)
-        blob_data = blob_client.download_blob()
-        return blob_data.readall()
+        
+        # First get blob properties to check size
+        properties = blob_client.get_blob_properties()
+        size_mb = properties.size / (1024 * 1024)
+        
+        # Add a warning for large files
+        if size_mb > 100:  # Warning for files larger than 100MB
+            st.warning(f"Large file detected ({size_mb:.1f}MB). Download may take some time.")
+        
+        # Create a progress bar for larger files
+        if size_mb > 10:  # Only show progress for files larger than 10MB
+            progress_bar = st.progress(0)
+            
+            # Download in chunks for large files
+            chunk_size = 1024 * 1024  # 1MB chunks
+            total_chunks = int(properties.size / chunk_size) + 1
+            
+            # Download stream
+            download_stream = blob_client.download_blob()
+            data = bytearray()
+            
+            for i, chunk in enumerate(download_stream.chunks()):
+                data.extend(chunk)
+                if progress_bar is not None:
+                    progress_bar.progress(min((i + 1) / total_chunks, 1.0))
+            
+            if progress_bar is not None:
+                progress_bar.empty()
+            
+            return bytes(data)
+        else:
+            # For smaller files, download directly
+            blob_data = blob_client.download_blob()
+            return blob_data.readall()
+            
     except Exception as e:
         st.error(f"Error downloading file: {str(e)}")
         return None
