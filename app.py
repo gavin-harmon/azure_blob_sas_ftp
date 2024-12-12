@@ -176,7 +176,16 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-
+def format_size(size_in_bytes):
+    """Format file size to human readable format"""
+    if size_in_bytes is None:
+        return "-"
+    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+        if size_in_bytes < 1024:
+            return f"{size_in_bytes:.1f} {unit}"
+        size_in_bytes /= 1024
+    return f"{size_in_bytes:.1f} PB"
+    
 def validate_container_access(account_name, container_name, sas_token):
     """Validate Azure credentials by attempting to list blobs in the container"""
     try:
@@ -289,17 +298,6 @@ def upload_files(container_client, files, current_path):
             st.success(f"Successfully uploaded {file.name}")
     except Exception as e:
         st.error(f"Error uploading files: {str(e)}")
-
-
-def download_blob(container_client, blob_name):
-    """Download a blob from Azure Storage"""
-    try:
-        blob_client = container_client.get_blob_client(blob_name)
-        blob_data = blob_client.download_blob()
-        return blob_data.readall()
-    except Exception as e:
-        st.error(f"Error downloading file: {str(e)}")
-        return None
 
 
 def show_navigation():
