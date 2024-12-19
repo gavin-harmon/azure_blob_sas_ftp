@@ -396,17 +396,28 @@ def show_file_browser():
                     # Download button with direct save functionality
                     with action_cols[0]:
                         # Download and show save button immediately
-                        if st.button("⬇️", key=f"download_btn_{item['name']}"):
-                            with st.spinner('Preparing download...'):
-                                blob_data = download_blob(st.session_state.container_client, item['name'])
-                                if blob_data:
-                                    st.download_button(
-                                        label="Save File",
-                                        data=blob_data,
-                                        file_name=display_name,
-                                        key=f"save_{item['name']}"
-                                    )
+                    with st.spinner('Preparing download...'):
+                        blob_data = download_blob(st.session_state.container_client, item['name'])
+                        if blob_data:
+                            st.download_button(
+                                label="⬇️",
+                                data=blob_data,
+                                file_name=display_name,
+                                key=f"download_{item['name']}"
+                            )
 
+
+                 if file_content:
+                        st.download_button(
+                            label="📥 Download",
+                            data=file_content,
+                            file_name=selected_file.name,
+                            mime="application/octet-stream",
+                            key=f"{self.key_prefix}_download"
+                        )
+
+
+                
                 # Delete button
                 with action_cols[1]:
                     if st.button("🗑️", key=f"delete_{item['name']}",
