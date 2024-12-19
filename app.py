@@ -391,36 +391,41 @@ def show_file_browser():
 
             # Actions column
             with cols[3]:
-                action_cols = st.columns([1, 1])
-                if not item['is_directory']:
-                    with action_cols[0]:
-                        # Single download button that handles everything
-                        st.download_button(
-                            label="⬇️",
-                            data=download_blob(st.session_state.container_client, item['name']),
-                            file_name=display_name,
-                            key=f"download_{item['name']}"
-                        )
-                    
-                    # Delete button remains unchanged
-                    with action_cols[1]:
-                        if st.button("🗑️", key=f"delete_{item['name']}", 
-                                    help="Delete" + (" directory" if item['is_directory'] else " file")):
-                            if st.session_state.get(f"confirm_delete_{item['name']}", False):
-                                # Perform deletion
-                                if item['is_directory']:
-                                    if delete_directory(st.session_state.container_client, item['name']):
-                                        st.success(f"Directory {display_name} deleted successfully")
-                                        st.rerun()
-                                else:
-                                    if delete_blob(st.session_state.container_client, item['name']):
-                                        st.success(f"File {display_name} deleted successfully")
-                                        st.rerun()
-                            else:
-                                # Show confirmation
-                                st.session_state[f"confirm_delete_{item['name']}"] = True
-                                st.warning(f"You sure?")
-
+               action_cols = st.columns([1, 1])
+               if not item['is_directory']:
+                   with action_cols[0]:
+                       # Prepare download button
+                       if st.button("⬇️", key=f"download_btn_{item['name']}", help="Prepare download"):
+                           with st.spinner('Preparing download...'):
+                               blob_data = download_blob(st.session_state.container_client, item['name'])
+                               if blob_data:
+                                   # Show save button once data is ready
+                                   st.download_button(
+                                       label="💾",
+                                       data=blob_data,
+                                       file_name=display_name,
+                                       key=f"download_{item['name']}", 
+                                       help="Save file"
+                                   )
+                   
+                   # Delete button
+                   with action_cols[1]:
+                       if st.button("🗑️", key=f"delete_{item['name']}", 
+                                   help="Delete" + (" directory" if item['is_directory'] else " file")):
+                           if st.session_state.get(f"confirm_delete_{item['name']}", False):
+                               # Perform deletion
+                               if item['is_directory']:
+                                   if delete_directory(st.session_state.container_client, item['name']):
+                                       st.success(f"Directory {display_name} deleted successfully")
+                                       st.rerun()
+                               else:
+                                   if delete_blob(st.session_state.container_client, item['name']):
+                                       st.success(f"File {display_name} deleted successfully")
+                                       st.rerun()
+                           else:
+                               # Show confirmation
+                               st.session_state[f"confirm_delete_{item['name']}"] = True
+                               st.warning(f"You sure?")
 
 
 
