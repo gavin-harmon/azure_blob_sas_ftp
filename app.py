@@ -394,24 +394,15 @@ def show_file_browser():
                 action_cols = st.columns([1, 1])
                 if not item['is_directory']:
                     with action_cols[0]:
-                        download_key = f"download_data_{item['name']}"
-                        
-                        # If data isn't in session state, show initial download button
-                        if download_key not in st.session_state:
-                            if st.button("⬇️", key=f"fetch_{item['name']}"):
-                                with st.spinner('Preparing download...'):
-                                    st.session_state[download_key] = download_blob(st.session_state.container_client, item['name'])
-                                    st.rerun()
-                        # Once data is fetched, show download button
-                        else:
-                            st.download_button(
-                                "⬇️",
-                                data=st.session_state[download_key],
-                                file_name=display_name,
-                                key=f"download_{item['name']}"
-                            )
-                            
-                    # Delete button
+                        # Single download button that handles everything
+                        st.download_button(
+                            label="⬇️",
+                            data=download_blob(st.session_state.container_client, item['name']),
+                            file_name=display_name,
+                            key=f"download_{item['name']}"
+                        )
+                    
+                    # Delete button remains unchanged
                     with action_cols[1]:
                         if st.button("🗑️", key=f"delete_{item['name']}", 
                                     help="Delete" + (" directory" if item['is_directory'] else " file")):
