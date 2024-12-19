@@ -405,18 +405,6 @@ def show_file_browser():
                                 file_name=display_name,
                                 key=f"download_{item['name']}"
                             )
-
-
-                 if file_content:
-                        st.download_button(
-                            label="📥 Download",
-                            data=file_content,
-                            file_name=selected_file.name,
-                            mime="application/octet-stream",
-                            key=f"{self.key_prefix}_download"
-                        )
-
-
                 
                 # Delete button
                 with action_cols[1]:
