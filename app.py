@@ -394,13 +394,10 @@ def show_file_browser():
                 action_cols = st.columns([1, 1])
                 if not item['is_directory']:
                     with action_cols[0]:
-                        def get_blob_with_spinner():
-                            with st.spinner('Preparing download...'):
-                                return download_blob(st.session_state.container_client, item['name'])
-                        
+                        blob_data = download_blob(st.session_state.container_client, item['name'])
                         st.download_button(
                             label="⬇️",
-                            data=get_blob_with_spinner,
+                            data=blob_data if blob_data else b"",  # Provide empty bytes if download fails
                             file_name=display_name,
                             key=f"download_{item['name']}"
                         )
