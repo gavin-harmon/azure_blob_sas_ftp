@@ -404,25 +404,25 @@ def show_file_browser():
                                 key=f"download_{item['name']}"
                             )
                 
-                # Delete button
-                with action_cols[1]:
-                    if st.button("🗑️", key=f"delete_{item['name']}",
-                                 help="Delete" + (" directory" if item['is_directory'] else " file")):
-                        if st.session_state.get(f"confirm_delete_{item['name']}", False):
-                            # Perform deletion
-                            if item['is_directory']:
-                                if delete_directory(st.session_state.container_client, item['name']):
-                                    st.success(f"Directory {display_name} deleted successfully")
-                                    st.rerun()
+                    # Delete button
+                    with action_cols[1]:
+                        if st.button("🗑️", key=f"delete_{item['name']}",
+                                     help="Delete" + (" directory" if item['is_directory'] else " file")):
+                            if st.session_state.get(f"confirm_delete_{item['name']}", False):
+                                # Perform deletion
+                                if item['is_directory']:
+                                    if delete_directory(st.session_state.container_client, item['name']):
+                                        st.success(f"Directory {display_name} deleted successfully")
+                                        st.rerun()
+                                else:
+                                    if delete_blob(st.session_state.container_client, item['name']):
+                                        st.success(f"File {display_name} deleted successfully")
+                                        st.rerun()
                             else:
-                                if delete_blob(st.session_state.container_client, item['name']):
-                                    st.success(f"File {display_name} deleted successfully")
-                                    st.rerun()
-                        else:
-                            # Show confirmation
-                            st.session_state[f"confirm_delete_{item['name']}"] = True
-                            st.warning(
-                                f"You sure?")
+                                # Show confirmation
+                                st.session_state[f"confirm_delete_{item['name']}"] = True
+                                st.warning(
+                                    f"You sure?")
 
 
     # Upload section
