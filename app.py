@@ -394,8 +394,6 @@ def show_file_browser():
                 action_cols = st.columns([1, 1])
                 if not item['is_directory']:
                     # Download button with direct save functionality
-                    with action_cols[0]:
-                        # Download and show save button immediately
                     with st.spinner('Preparing download...'):
                         blob_data = download_blob(st.session_state.container_client, item['name'])
                         if blob_data:
