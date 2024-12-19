@@ -394,23 +394,21 @@ def show_file_browser():
                 action_cols = st.columns([1, 1])
                 if not item['is_directory']:
                     with action_cols[0]:
-                        # Trigger download directly when the button is clicked
-                        if st.button("⬇️", key=f"download_btn_{item['name']}"):
+                        def get_blob_with_spinner():
                             with st.spinner('Preparing download...'):
-                                blob_data = download_blob(st.session_state.container_client, item['name'])
-                                if blob_data:
-                                    # Immediately download file
-                                    st.download_button(
-                                        label="⬇️ Download",
-                                        data=blob_data,
-                                        file_name=display_name,
-                                        key=f"download_{item['name']}"
-                                    )
-            
+                                return download_blob(st.session_state.container_client, item['name'])
+                        
+                        st.download_button(
+                            label="⬇️",
+                            data=get_blob_with_spinner,
+                            file_name=display_name,
+                            key=f"download_{item['name']}"
+                        )
+                    
                     # Delete button
                     with action_cols[1]:
-                        if st.button("🗑️", key=f"delete_{item['name']}",
-                                     help="Delete" + (" directory" if item['is_directory'] else " file")):
+                        if st.button("🗑️", key=f"delete_{item['name']}", 
+                                    help="Delete" + (" directory" if item['is_directory'] else " file")):
                             if st.session_state.get(f"confirm_delete_{item['name']}", False):
                                 # Perform deletion
                                 if item['is_directory']:
