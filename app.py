@@ -393,36 +393,38 @@ def show_file_browser():
             with cols[3]:
                 action_cols = st.columns([1, 1])
                 if not item['is_directory']:
-                    # Download button with direct save functionality
-                    with st.spinner('Preparing download...'):
-                        blob_data = download_blob(st.session_state.container_client, item['name'])
-                        if blob_data:
-                            st.download_button(
-                                label="⬇️",
-                                data=blob_data,
-                                file_name=display_name,
-                                key=f"download_{item['name']}"
-                            )
-                
-                    # Delete button
-                    with action_cols[1]:
-                        if st.button("🗑️", key=f"delete_{item['name']}",
-                                     help="Delete" + (" directory" if item['is_directory'] else " file")):
-                            if st.session_state.get(f"confirm_delete_{item['name']}", False):
-                                # Perform deletion
-                                if item['is_directory']:
-                                    if delete_directory(st.session_state.container_client, item['name']):
-                                        st.success(f"Directory {display_name} deleted successfully")
-                                        st.rerun()
+                    with action_cols[0]:
+    
+                            # Download button with direct save functionality
+                            with st.spinner('Preparing download...'):
+                                blob_data = download_blob(st.session_state.container_client, item['name'])
+                                if blob_data:
+                                    st.download_button(
+                                        label="⬇️",
+                                        data=blob_data,
+                                        file_name=display_name,
+                                        key=f"download_{item['name']}"
+                                )
+                    
+                        # Delete button
+                        with action_cols[1]:
+                            if st.button("🗑️", key=f"delete_{item['name']}",
+                                         help="Delete" + (" directory" if item['is_directory'] else " file")):
+                                if st.session_state.get(f"confirm_delete_{item['name']}", False):
+                                    # Perform deletion
+                                    if item['is_directory']:
+                                        if delete_directory(st.session_state.container_client, item['name']):
+                                            st.success(f"Directory {display_name} deleted successfully")
+                                            st.rerun()
+                                    else:
+                                        if delete_blob(st.session_state.container_client, item['name']):
+                                            st.success(f"File {display_name} deleted successfully")
+                                            st.rerun()
                                 else:
-                                    if delete_blob(st.session_state.container_client, item['name']):
-                                        st.success(f"File {display_name} deleted successfully")
-                                        st.rerun()
-                            else:
-                                # Show confirmation
-                                st.session_state[f"confirm_delete_{item['name']}"] = True
-                                st.warning(
-                                    f"You sure?")
+                                    # Show confirmation
+                                    st.session_state[f"confirm_delete_{item['name']}"] = True
+                                    st.warning(
+                                        f"You sure?")
 
 
     # Upload section
